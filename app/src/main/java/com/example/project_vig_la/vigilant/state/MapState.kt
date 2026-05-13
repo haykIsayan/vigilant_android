@@ -16,6 +16,11 @@ sealed interface CrimeState {
 
 }
 
+enum class CrimeUpdateState {
+    Updating,
+    Updated
+}
+
 
 sealed interface MapState {
 
@@ -31,7 +36,8 @@ sealed interface MapState {
         val bounds: LatLngBounds? = null,
         val activeFilters: Set<CrimeCategory> = CrimeCategory.entries.toSet(),
         val filteredCrimes: List<CrimeEntity>,
-        val crimes: List<CrimeEntity>
+        val crimes: List<CrimeEntity>,
+        val crimeUpdateState: CrimeUpdateState = CrimeUpdateState.Updated
     ) : MapState
     data class Error(val message: String) : MapState
 }

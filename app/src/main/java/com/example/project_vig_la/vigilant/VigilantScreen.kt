@@ -6,10 +6,20 @@ import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -19,10 +29,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -32,6 +46,8 @@ import com.example.project_vig_la.vigilant.state.MapEvent
 import com.example.project_vig_la.vigilant.state.MapIntent
 import com.example.project_vig_la.vigilant.state.MapState
 import com.example.project_vig_la.vigilant.state.MapViewModel
+import com.google.android.gms.maps.CameraUpdate
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
@@ -47,6 +63,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.launch
 
 @Composable
 fun VigilantScreen(
@@ -54,6 +71,7 @@ fun VigilantScreen(
     mapViewModel: MapViewModel
 ) {
 
+    val scope = rememberCoroutineScope()
     val locationGranted = remember { mutableStateOf(false) }
 
     LocationPermissionHandler(
@@ -118,6 +136,24 @@ fun VigilantScreen(
         ) { crime ->
             mapViewModel.sendIntent(MapIntent.SelectCrime(crime))
         }
+        UserLocationFab(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(22.dp),
+        ) {
+            val location = when (val state = uiState.value) {
+                is MapState.Loaded -> state.userLocation
+                else -> null
+            }
+            location?.let {
+                scope.launch {
+                    cameraPositionState.animate(
+                        CameraUpdateFactory.newLatLngZoom(it, 15f),
+                        durationMs = 800
+                    )
+                }
+            }
+        }
         CrimeFilterBar(
             activeFilters = activeFilters,
             onToggle = { category ->
@@ -129,8 +165,32 @@ fun VigilantScreen(
                 .padding(top = 8.dp)
         )
     }
+}
 
-
+@Composable
+private fun UserLocationFab(
+    modifier: Modifier,
+    onMoveToUserLocation: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .size(48.dp)
+            .rotate(45f)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF0D0D0D))
+            .border(1.dp, Color(0xFF2A2A2A), RoundedCornerShape(12.dp))
+            .clickable { onMoveToUserLocation() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.LocationOn,
+            contentDescription = "My Location",
+            tint = Color(0xFFCC1A1A),
+            modifier = Modifier
+                .size(22.dp)
+                .rotate(-45f) // counter-rotate so the icon stays upright
+        )
+    }
 }
 
 @Composable
